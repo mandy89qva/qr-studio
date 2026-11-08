@@ -1,7 +1,8 @@
+import { neon } from "@neondatabase/serverless";
 
 interface Env {
   ASSETS: Fetcher;
-  DATABASE_URL: string;
+  DATABASE_URL?: string;
 }
 
 interface Fetcher {
@@ -35,11 +36,28 @@ export default {
       let response: Response;
 
       if (url.pathname === "/api/health" && request.method === "GET") {
-        response = json({
-          status: "ok",
-          service: "QR Studio API",
-          databaseConfigured: Boolean(env.DATABASE_URL),
-        });
+        if (!env.DATABASE_URL) {
+          response = json({
+            status: "degraded",
+            database: "not_configured",
+          }, 503);
+        } else {
+          try {
+            const sql = neon(env.DATABASE_URL);
+            await sql`SELECT 1 AS connected`;
+
+            response = json({
+              status: "ok",
+              service: "QR Studio API",
+              database: "connected",
+            });
+          } catch {
+            response = json({
+              status: "degraded",
+              database: "unavailable",
+            }, 503);
+          }
+        }
       } else {
         response = json(
           { error: "Endpoint no disponible todavía." },
@@ -48,6 +66,7 @@ export default {
       }
 
       const headers = new Headers(response.headers);
+
       Object.entries(corsHeaders).forEach(([key, value]) => {
         headers.set(key, value);
       });
@@ -61,4 +80,3 @@ export default {
     return env.ASSETS.fetch(request);
   },
 };
-
