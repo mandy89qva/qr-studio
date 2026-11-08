@@ -1,0 +1,28 @@
+name: Validate QR Studio
+
+on:
+  push:
+    branches:
+      - qr-studio-backend-foundation
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Obtener código
+        uses: actions/checkout@v4
+
+      - name: Configurar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Instalar dependencias
+        run: npm install
+
+      - name: Comprobar compilación
+        run: npm run build
